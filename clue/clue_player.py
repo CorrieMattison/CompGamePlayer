@@ -297,6 +297,7 @@ def play(starting_index):
                 print("It appears that there is no possible way to suggest. Move to the room that you can get closest to. If there's a tie, choose the position closer to entering a corner room.")
                 suggest = False
             else:
+                suggestion = [list(suspects.keys())[0], list(weapons.keys())[0], possible_rooms[0]]
                 # Rooms not known by the next player(s). If it were known by index 1, we wouldn't learn anything.
                 room_ratings = dict()
                 for j in range(len(possible_rooms)):
@@ -326,11 +327,52 @@ def play(starting_index):
                 s_known = not accusation[0] == "?"
                 w_known = not accusation[1] == "?"
                 r_known = not accusation[2] == "?"
+                num_known = 0
+                if s_known: num_known += 1
+                if w_known: num_known += 1
+                if r_known: num_known += 1
 
-                if not players[0].all_are_found():
+                first_all_found = -1
+                for j in range(1, num_players):
+                    if players[j].all_are_found():
+                        first_all_found = j
+                        break
+
+                if num_known == 2:
+                    i_known = -1
+                    if not s_known:
+                        i_known = 0
+                    elif not w_known:
+                        i_known = 1
+                    elif not r_known:
+                        i_known = 2
+                    else:
+                        print("Somehow, when two are known, none are not known.")
+                    options = organized_ratings[i_known]["-1"]
+                    if not len(options) == 0:
+                        chosen = rand.choice(options)
+                        for j in range(3):
+                            if j == i_known:
+                                suggestion[j] = chosen
+                            else:
+                                best_indices = [-1, 0]
+                                for k in range(1, num_players):
+                                    best_indices.append(num_players - k)
+                                for k in best_indices:
+                                    if not len(organized_ratings[j][str(k)]) == 0:
+                                        suggestion[j] = rand.choice(organized_ratings[j][str(k)])
+                                        break
+
+                elif num_known == 1:
                     pass
+                elif num_known == 0:
+                    pass
+                else:
+                    print("I should have made an accusation.")
+                    make_accusation()
 
-                current_guess = "WLB" # FIX, THIS IS JUST SO IT DOESN'T BREAK
+                current_guess = suggestion[0] + suggestion[1] + suggestion[2]
+                print("Suggest: " + suspects[suggestion[0]] + " with the " + weapons[suggestion[1]] + " in the " + rooms[suggestion[2]] + ".")
 
         else:
             current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
@@ -343,18 +385,21 @@ def play(starting_index):
             new_move.apply_move()
             if not new_move.is_fully_applied():
                 unused_moves.append(new_move)
+            
             print("Unused Moves")
             for j in range(len(unused_moves)): print("\n" + str(unused_moves[i]))
+            
             for move in unused_moves:
                 move.apply_move()
                 if move.is_fully_applied():
                     unused_moves.remove(move)
+        
             print("Players")
             for j in range(len(players)): print(players[j])
+
             if i == 0:
                 can_accuse = True
                 for j in range(len(result)):
-                    print(not result[j] == "Y")
                     if not result[j] == "Y":
                         can_accuse = False
                         break
@@ -366,3 +411,14 @@ start_i = int(get_input(lambda input : input.isnumeric(), "Index of the starting
 play(start_i)
 while True:
     play(0)
+
+# Important: make it not redundant in discoveries and keep the number discovered correct
+    # It seems like the pattern here actually is consistent, easier to solve
+    # Also make it not redundant when discovering accusation
+# Figure out why it never shows unused moves
+# Make it work when not two are known
+# I think we can prevent it from choosing something random. Let's go with something we know.
+# Specifically, first priority something I have or what I know it to be, second something unknown, then go down
+# Really, it should look at where the Ns are, but this gets more complicated.
+# We haven't said yet that if a player has a card, then nobody else can. Because it's complicated.
+# Still want to at least let you know what you've told other players.
