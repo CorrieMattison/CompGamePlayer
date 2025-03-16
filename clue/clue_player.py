@@ -2,9 +2,9 @@ import numpy as np
 import sys
 import random as rand
 
-suspects = {"M": "Col. Mustard", "P": "Prof. Plum", "G": "Mr. Green", "E": "Mrs. Peacock", "S": "Miss Scarlet", "W": "Mrs. White"}
+suspects = {"M": "Col. Mustard", "P": "Prof. Plum", "G": "Mr. Green", "E": "Mrs. Peacock", "S": "Miss Scarlett", "W": "Mrs. White"}
 weapons = {"K": "Knife", "C": "Candlestick", "P": "Pistol", "R": "Rope", "L": "Lead Pipe", "W": "Wrench"}
-rooms = {"H": "Hall", "L": "Lounge", "D": "Dining Room", "K": "Kitchen", "B": "Ball Room", "C": "Conservatory", "I": "Billiard Room", "Y": "Library", "S": "Study"}
+rooms = {"H": "Hall", "L": "Lounge", "D": "Dining Room", "K": "Kitchen", "B": "Ballroom", "C": "Conservatory", "I": "Billiard Room", "Y": "Library", "S": "Study"}
 
 def get_input(is_valid, message):
     valid_input = input(message)
@@ -339,6 +339,7 @@ def play(starting_index):
                 ratings = [suspect_ratings, weapon_ratings, room_ratings]
 
                 # Now, for all three, we will make a dictionary of lists, from -1 to the number of players
+                # This keeps track of which ones have which rating, making it easier to access.
                 organized_ratings = [dict(), dict(), dict()]
                 for num_i in range(-1, num_players):
                     for type_i in range(3):
@@ -362,20 +363,20 @@ def play(starting_index):
                         break
 
                 if num_known == 2:
-                    i_known = -1
+                    i_not_known = -1
                     if not s_known:
-                        i_known = 0
+                        i_not_known = 0
                     elif not w_known:
-                        i_known = 1
+                        i_not_known = 1
                     elif not r_known:
-                        i_known = 2
+                        i_not_known = 2
                     else:
                         print("Somehow, when two are known, none are not known.")
-                    options = organized_ratings[i_known]["-1"]
+                    options = organized_ratings[i_not_known]["-1"]
                     if not len(options) == 0:
                         chosen = rand.choice(options)
                         for j in range(3):
-                            if j == i_known:
+                            if j == i_not_known:
                                 suggestion[j] = chosen
                             else:
                                 best_indices = [0, -1]
@@ -387,9 +388,35 @@ def play(starting_index):
                                         break
 
                 elif num_known == 1:
-                    pass
+                    i_known = -1
+                    if not s_known:
+                        i_known = 0
+                    elif not w_known:
+                        i_known = 1
+                    elif not r_known:
+                        i_known = 2
+                    else:
+                        print("Somehow, when two are known, none are not known.")
+                    for j in range(3):
+                        if j == i_known:
+                            suggestion[j] = rand.choice([rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["-1"])])
+                        else:
+                            best_indices = [-1, 0]
+                            for k in range(1, num_players):
+                                best_indices.append(num_players - k)
+                            for k in best_indices:
+                                if not len(organized_ratings[j][str(k)]) == 0:
+                                    suggestion[j] = rand.choice(organized_ratings[j][str(k)])
+                                    break
                 elif num_known == 0:
-                    pass
+                    for j in range(3):
+                        best_indices = [-1, 0]
+                        for k in range(1, num_players):
+                            best_indices.append(num_players - k)
+                        for k in best_indices:
+                            if not len(organized_ratings[j][str(k)]) == 0:
+                                suggestion[j] = rand.choice(organized_ratings[j][str(k)])
+                                break
                 else:
                     print("I should have made an accusation.")
                     make_accusation()
@@ -438,14 +465,6 @@ play(start_i)
 while True:
     play(0)
 
-# DONE Important: make it not redundant in discoveries and keep the number discovered correct
-    # DONE It seems like the pattern here actually is consistent, easier to solve
-    # DONE Also make it not redundant when discovering accusation
-# ? Done Figure out why it never shows unused moves
-# Make it work when not two are known
-# DONE I think we can prevent it from choosing something random. Let's go with something we know.
-    # DONE Specifically, first priority something I have or what I know it to be, second something unknown, then go down
-    # Really, it should look at where the Ns are, but this gets more complicated.
-# DONE We haven't said yet that if a player has a card, then nobody else can. Because it's complicated.
+# Really, it should look at where the Ns are, but this gets more complicated.
 # Still want to at least let you know what you've told other players.
 # If you can't learn much about the only remaining one, try to learn about their cards.
