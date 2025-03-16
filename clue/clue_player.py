@@ -93,6 +93,7 @@ def check_accusation(possible_items, type_index, type_string, type):
         accusation[type_index] = the_possible
         print("We now know that the " + type_string + " is " + get_item(type, the_possible))
         if (not accusation[0] == "?") and (not accusation[1] == "?") and (not accusation[2] == "?"):
+            global accuse
             accuse = True
 
 def check_real_s():
@@ -105,7 +106,7 @@ def check_real_r():
     check_accusation(real_r, 2, "ROOM", "R")
 
 def make_accusation():
-    print("Make an accusation. The crime was committed by " + accusation[0] + " with the " + accusation[1] + " in the " + accusation[2] + ".")
+    print("Make an accusation. The crime was committed by " + suspects[accusation[0]] + " with the " + weapons[accusation[1]] + " in the " + rooms[accusation[2]] + ".")
     sys.exit()
 
 class Move:
@@ -352,15 +353,11 @@ def play(starting_index):
             for j in range(len(players)): print(players[j])
             if i == 0:
                 can_accuse = True
-                print("Checking to accuse...")
                 for j in range(len(result)):
                     print(not result[j] == "Y")
                     if not result[j] == "Y":
                         can_accuse = False
-                        print("Not possible " + str(j))
                         break
-                print("Can Accuse:", can_accuse)
-                print("Accuse:", accuse)
                 if can_accuse and accuse:
                     make_accusation()
 
