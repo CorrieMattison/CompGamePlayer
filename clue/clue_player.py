@@ -18,6 +18,8 @@ def get_input(is_valid, message):
 
 num_players = int(get_input(lambda input : input.isnumeric(), "Enter the number of players: "))
 possible_types = ["S", "W", "R"]
+my_known_cards = [[]] * num_players
+print(my_known_cards)
 players = []
 moves = []
 unused_moves = []
@@ -172,6 +174,8 @@ class Move:
                         applied = False
             else:
                 player.set_item_true(result[0], result[1])
+                if player_i == 0:
+                    my_known_cards[self.player].append(result[0] + result[1])
         self.fully_applied = applied
     
     def is_fully_applied(self):
@@ -219,7 +223,9 @@ class Player:
         return False
 
     def set_item_false(self, type, item):
-        self.set_item(type, item, "N")
+        redundant = self.set_item(type, item, "N")
+        if not redundant:
+            print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item(type, item))
 
     def set_item_true(self, type, item):
         redundant = self.set_item(type, item, "Y")
@@ -320,12 +326,12 @@ def play(starting_index):
                 print("It appears that there is no possible way to suggest. Move to the room that you can get closest to. If there's a tie, choose the position closer to entering a corner room.")
                 suggest = False
             else:
-                suggestion = [list(suspects.keys())[0], list(weapons.keys())[0], possible_rooms[0]]
+                suggestion = [rand.choice(list(suspects.keys())), rand.choice(list(weapons.keys())), rand.choice(possible_rooms)]
                 # Rooms not known by the next player(s). If it were known by index 1, we wouldn't learn anything.
                 room_ratings = dict()
                 for j in range(len(possible_rooms)):
                     room_ratings[possible_rooms[j]] = rate_room(possible_rooms[j])
-                
+
                 # Same for weapons
                 weapon_ratings = dict()
                 for weapon in weapons.keys():
@@ -356,11 +362,11 @@ def play(starting_index):
                 if w_known: num_known += 1
                 if r_known: num_known += 1
 
-                first_all_found = -1
-                for j in range(1, num_players):
-                    if players[j].all_are_found():
-                        first_all_found = j
-                        break
+                # first_all_found = -1
+                # for j in range(1, num_players):
+                #     if players[j].all_are_found():
+                #         first_all_found = j
+                #         break
 
                 if num_known == 2:
                     i_not_known = -1
@@ -426,6 +432,14 @@ def play(starting_index):
 
         else:
             current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
+            if "S" + current_guess[0] in my_known_cards[i]:
+                print("If asked, show this card: " + suspects[current_guess[0]])
+            elif "W" + current_guess[1] in my_known_cards[i]:
+                print("If asked, show this card: " + weapons[current_guess[1]])
+            elif "R" + current_guess[2] in my_known_cards[i]:
+                print("If asked, show this card: " + rooms[current_guess[2]])
+            else:
+                print("If asked, choose a random card to show.")
             if current_guess == "":
                 print("I conclude that this player only moved.")
                 suggest = False
@@ -465,6 +479,8 @@ play(start_i)
 while True:
     play(0)
 
-# Really, it should look at where the Ns are, but this gets more complicated.
-# Still want to at least let you know what you've told other players.
-# If you can't learn much about the only remaining one, try to learn about their cards.
+# Things I would still like to improve:
+    # Make it consider what the best option would be if it can't choose the most favorable option when there's only one thing left to discover. Don't just be random.
+    # When considering choices for already-known types when there's only one more to be discovered, also consider ones that you know someone else has if they're far enough along that it won't affect potential discoveries.
+    # Make valid_result() actually check.
+    # Make it think about which cards would be possible to show if it doesn't matter.
