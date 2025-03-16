@@ -10,7 +10,7 @@ def get_input(is_valid, message):
     if valid_input == "STOP":
         sys.exit()
     while not is_valid(valid_input):
-        valid_input = input(message)
+        valid_input = input("Invalid. " + message)
         if valid_input == "STOP":
             sys.exit()
     return valid_input
@@ -19,6 +19,23 @@ num_players = int(get_input(lambda input : input.isnumeric(), "Enter the number 
 possible_types = ["S", "W", "R"]
 players = []
 moves = []
+unused_moves = []
+
+def items_for_type(given_type):
+    if given_type == "S":
+        return suspects.keys()
+    elif given_type == "W":
+        return weapons.keys()
+    elif given_type == "R":
+        return rooms.keys()
+    
+def get_item(type, item):
+    if type == "S":
+        return suspects[item]
+    elif type == "W":
+        return weapons[item]
+    elif type == "R":
+        return rooms[item]
 
 def init_possibilities(possibilities_dict):
     for i in possibilities_dict.keys():
@@ -39,6 +56,48 @@ def valid_guess(guess):
 def valid_result(result):
     return True # Fix - make this actually check
 
+real_s = init_possibilities(suspects.copy())
+real_w = init_possibilities(weapons.copy())
+real_r = init_possibilities(rooms.copy())
+accusation = ["?", "?", "?"]
+
+def check_accusation(possible_items, type_index, type_string, type):
+    known = False
+
+    num_possible = 0
+    for i in possible_items.keys():
+        if possible_items[i] == "?":
+            num_possible += 1
+            the_possible = i
+            might_be_guaranteed = True
+            for player in players:
+                if type == "S":
+                    possible = player.s_possible
+                elif type == "W":
+                    possible = player.w_possible
+                elif type == "R":
+                    possible = player.r_possible
+                if not possible[i] == "N":
+                    might_be_guaranteed = False
+            if might_be_guaranteed:
+                known = True
+                break
+    if num_possible == 1:
+        known = True
+
+    if known:
+        accusation[type_index] = the_possible
+        print("We now know that the " + type_string + " is " + get_item(type, the_possible))
+
+def check_real_s():
+    check_accusation(real_s, 0, "SUSPECT", "S")
+
+def check_real_w():
+    check_accusation(real_w, 1, "WEAPON", "W")
+
+def check_real_r():
+    check_accusation(real_r, 2, "ROOM", "R")
+
 class Move:
     player_possibilities = []
     def __init__(self, player, guess, result):
@@ -47,8 +106,9 @@ class Move:
         self.w = guess[1]
         self.r = guess[2]
         self.process(result)
+        self.fully_applied = False
 
-    # Y means the person didn't have it, N means the person didn't, S/W/R then letter of thing means you were told
+    # Y means the person didn't have it, N means the person did, S/W/R then letter of thing means you were told
     def process(self, result):
         for i in range(len(players)):
             if players[i].get_name() == self.player:
@@ -66,8 +126,43 @@ class Move:
             self.player_results[(i + self.player + 1) % num_players] = results[i]
         return self
     
+    def apply_move(self):
+        applied = True
+        for player_i in range(len(self.player_results)):
+            result = self.player_results[player_i]
+            player = players[player_i]
+            if result == "":
+                continue
+            elif result == "Y":
+                player.set_item_false("S", self.s)
+                player.set_item_false("W", self.w)
+                player.set_item_false("R", self.r)
+            elif result == "N":
+                s_state = player.s_possible[self.s]
+                w_state = player.w_possible[self.w]
+                r_state = player.r_possible[self.r]
+                if not "Y" in [s_state, w_state, r_state]:
+                    num_unknown = 0
+                    if s_state == "?":
+                        num_unknown += 1
+                        the_unknown = ["S", self.s]
+                    if w_state == "?":
+                        num_unknown += 1
+                        the_unknown = ["W", self.w]
+                    if r_state == "?":
+                        num_unknown += 1
+                        the_unknown = ["R", self.r]
+                    if num_unknown == 1:
+                        player.set_item_true(the_unknown[0], the_unknown[1])
+            else:
+                player.set_item_true(result[0], result[1])
+        self.fully_applied = applied
+    
+    def is_fully_applied(self):
+        return self.fully_applied
+    
     def __str__(self):
-        return("Guessed: " + self.s + self.w + self.r + ", Result: " + str(self.player_results))
+        return("Guessed: " + suspects[self.s] + " with the " + weapons[self.w] + " in the " + rooms[self.r] + ", Result: " + str(self.player_results))
 
 class Player:
     def __init__(self, name, num_cards):
@@ -87,10 +182,13 @@ class Player:
     def set_item(self, type, item, value):
         if type == "S":
             self.s_possible[item] = value
+            check_real_s()
         elif type == "W":
             self.w_possible[item] = value
+            check_real_w()
         elif type == "R":
             self.r_possible[item] = value
+            check_real_r()
         else:
             print("I was somehow given something to change that was not S or W or R. This should be impossible.")
 
@@ -98,6 +196,7 @@ class Player:
         self.set_item(type, item, "N")
 
     def set_item_true(self, type, item):
+        print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item(type, item))
         self.set_item(type, item, "Y")
         self.cards_found += 1
         if self.cards_found == self.num_cards:
@@ -124,22 +223,14 @@ def cards_from_bool(input):
 
 for i in range(num_players):
     if same_card_num:
-        players.append(Player(get_input(lambda input : input in suspects.keys(), str(i) + " Enter the player's name: "), card_num))
+        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), card_num))
     else:
-        players.append(Player(get_input(lambda input : input in suspects.keys(), str(i) + " Enter the player's name: "), cards_from_bool(get_input(lambda input : input in ["Y", "N"], "Does this player have " + str(card_num) + " cards? Y/N: "))))
-
-def items_for_type(given_type):
-    if given_type == "S":
-        return suspects.keys()
-    elif given_type == "W":
-        return weapons.keys()
-    elif given_type == "R":
-        return rooms.keys()
+        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), cards_from_bool(get_input(lambda input : input in ["Y", "N"], "Does this player have " + str(card_num) + " cards? Y/N: "))))
 
 def valid_my_cards(input):
     if not len(input) == 2 * players[0].get_num_cards():
         return False
-    for i in range(players[0].get_num_cards()): # I can have different numbers of cards
+    for i in range(players[0].get_num_cards()):
         card_type = input[2 * i + 0]
         card_item = input[2 * i + 1]
         if not card_type in possible_types:
@@ -154,8 +245,23 @@ for i in range(players[0].get_num_cards()):
 
 print(players[0])
 
+def play(starting_index):
+    for i in range(starting_index, num_players):
+        current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
+        new_move = Move(players[i].get_name(), current_guess, get_input(lambda input : valid_result(input), "Enter the results of the guess: "))
+        moves.append(new_move)
+        new_move.apply_move()
+        if not new_move.is_fully_applied():
+            unused_moves.append(new_move)
+        for i in range(len(unused_moves)): print("\n" + str(unused_moves[i]))
+        for move in unused_moves:
+            move.apply_move()
+            if move.is_fully_applied():
+                unused_moves.remove(move)
+        # for i in range(len(players)): print(players[i])
+
+start_i = int(get_input(lambda input : input.isnumeric(), "Index of the starting player (I'm 0): "))
+
+play(start_i)
 while True:
-    for i in range(num_players):
-        current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess: ")
-        moves.append(Move(players[i].get_name(), current_guess, get_input(lambda input : valid_result(input), "Enter the results of the guess: ")))
-        print(moves[i])
+    play(0)
