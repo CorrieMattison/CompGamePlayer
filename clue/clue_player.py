@@ -97,13 +97,16 @@ def check_accusation(possible_items, type_index, type_string, type):
             accuse = True
 
 def check_real_s():
-    check_accusation(real_s, 0, "SUSPECT", "S")
+    if accusation[0] == "?":
+        check_accusation(real_s, 0, "SUSPECT", "S")
 
 def check_real_w():
-    check_accusation(real_w, 1, "WEAPON", "W")
+    if accusation[1] == "?":
+        check_accusation(real_w, 1, "WEAPON", "W")
 
 def check_real_r():
-    check_accusation(real_r, 2, "ROOM", "R")
+    if accusation[2] == "?":
+        check_accusation(real_r, 2, "ROOM", "R")
 
 def make_accusation():
     print("Make an accusation. The crime was committed by " + suspects[accusation[0]] + " with the " + weapons[accusation[1]] + " in the " + rooms[accusation[2]] + ".")
@@ -165,6 +168,8 @@ class Move:
                         the_unknown = ["R", self.r]
                     if num_unknown == 1:
                         player.set_item_true(the_unknown[0], the_unknown[1])
+                    else:
+                        applied = False
             else:
                 player.set_item_true(result[0], result[1])
         self.fully_applied = applied
@@ -176,8 +181,9 @@ class Move:
         return("Guessed: " + suspects[self.s] + " with the " + weapons[self.w] + " in the " + rooms[self.r] + ", Result: " + str(self.player_results))
 
 class Player:
-    def __init__(self, name, num_cards):
+    def __init__(self, name, index, num_cards):
         self.name = name
+        self.my_index = index
         self.num_cards = num_cards
         self.cards_found = 0
         self.fully_known = False
@@ -191,28 +197,41 @@ class Player:
     def get_num_cards(self):
         return self.num_cards
     
+    # Returns whether setting it would be redundant
     def set_item(self, type, item, value):
         if type == "S":
+            if not self.s_possible[item] == "?":
+                return True
             self.s_possible[item] = value
             check_real_s()
         elif type == "W":
+            if not self.w_possible[item] == "?":
+                return True
             self.w_possible[item] = value
             check_real_w()
         elif type == "R":
+            if not self.r_possible[item] == "?":
+                return True
             self.r_possible[item] = value
             check_real_r()
         else:
             print("I was somehow given something to change that was not S or W or R. This should be impossible.")
+        return False
 
     def set_item_false(self, type, item):
         self.set_item(type, item, "N")
 
     def set_item_true(self, type, item):
-        print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item(type, item))
-        self.set_item(type, item, "Y")
-        self.cards_found += 1
-        if self.cards_found == self.num_cards:
-            self.unknown_are_false()
+        redundant = self.set_item(type, item, "Y")
+        if not redundant:
+            players_without_item = list(range(num_players))
+            players_without_item.pop(self.my_index)
+            for i in players_without_item:
+                players[i].set_item_false(type, item)
+            print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item(type, item))
+            self.cards_found += 1
+            if self.cards_found == self.num_cards:
+                self.unknown_are_false()
     
     def unknown_are_false(self):
         for possibilities in [self.s_possible, self.w_possible, self.r_possible]:
@@ -239,9 +258,9 @@ def cards_from_bool(input):
 
 for i in range(num_players):
     if same_card_num:
-        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), card_num))
+        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), i, card_num))
     else:
-        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), cards_from_bool(get_input(lambda input : input in ["Y", "N"], "Does this player have " + str(card_num) + " cards? Y/N: "))))
+        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), i, cards_from_bool(get_input(lambda input : input in ["Y", "N"], "Does this player have " + str(card_num) + " cards? Y/N: "))))
 
 def valid_my_cards(input):
     if not len(input) == 2 * players[0].get_num_cards():
@@ -267,23 +286,27 @@ def is_rooms(input):
             return False
     return True
 
-def rate_room(room):
+def rate(item):
+    all_not = True
     for i in range(num_players):
-        if players[i].r_possible[room] == "Y":
+        if not item(i) == "N":
+            all_not = False
+        if item(i) == "Y":
             return i
-    return -1
+    if all_not:
+        # If we know that nobody has it, so therefore it is the item, we rank it the same as if we had it
+        return 0
+    else:
+        return -1
+
+def rate_room(room):
+    return rate(lambda index : players[index].r_possible[room])
 
 def rate_weapon(weapon):
-    for i in range(num_players):
-        if players[i].w_possible[weapon] == "Y":
-            return i
-    return -1
+    return rate(lambda index : players[index].w_possible[weapon])
 
 def rate_suspect(suspect):
-    for i in range(num_players):
-        if players[i].s_possible[suspect] == "Y":
-            return i
-    return -1
+    return rate(lambda index : players[index].s_possible[suspect])
 
 def play(starting_index):
     for i in range(starting_index, num_players):
@@ -355,7 +378,7 @@ def play(starting_index):
                             if j == i_known:
                                 suggestion[j] = chosen
                             else:
-                                best_indices = [-1, 0]
+                                best_indices = [0, -1]
                                 for k in range(1, num_players):
                                     best_indices.append(num_players - k)
                                 for k in best_indices:
@@ -377,6 +400,7 @@ def play(starting_index):
         else:
             current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
             if current_guess == "":
+                print("I conclude that this player only moved.")
                 suggest = False
         if suggest:
             result = get_input(lambda input : valid_result(input), "Enter the results of the guess: ")
@@ -386,16 +410,18 @@ def play(starting_index):
             if not new_move.is_fully_applied():
                 unused_moves.append(new_move)
             
-            print("Unused Moves")
-            for j in range(len(unused_moves)): print("\n" + str(unused_moves[i]))
+            print("\nUnused Moves")
+            print(len(unused_moves))
+            for j in range(len(unused_moves)): print(str(unused_moves[j]))
             
             for move in unused_moves:
                 move.apply_move()
                 if move.is_fully_applied():
                     unused_moves.remove(move)
         
-            print("Players")
+            print("\nPlayers")
             for j in range(len(players)): print(players[j])
+            print("\n")
 
             if i == 0:
                 can_accuse = True
@@ -412,13 +438,14 @@ play(start_i)
 while True:
     play(0)
 
-# Important: make it not redundant in discoveries and keep the number discovered correct
-    # It seems like the pattern here actually is consistent, easier to solve
-    # Also make it not redundant when discovering accusation
-# Figure out why it never shows unused moves
+# DONE Important: make it not redundant in discoveries and keep the number discovered correct
+    # DONE It seems like the pattern here actually is consistent, easier to solve
+    # DONE Also make it not redundant when discovering accusation
+# ? Done Figure out why it never shows unused moves
 # Make it work when not two are known
-# I think we can prevent it from choosing something random. Let's go with something we know.
-# Specifically, first priority something I have or what I know it to be, second something unknown, then go down
-# Really, it should look at where the Ns are, but this gets more complicated.
-# We haven't said yet that if a player has a card, then nobody else can. Because it's complicated.
+# DONE I think we can prevent it from choosing something random. Let's go with something we know.
+    # DONE Specifically, first priority something I have or what I know it to be, second something unknown, then go down
+    # Really, it should look at where the Ns are, but this gets more complicated.
+# DONE We haven't said yet that if a player has a card, then nobody else can. Because it's complicated.
 # Still want to at least let you know what you've told other players.
+# If you can't learn much about the only remaining one, try to learn about their cards.
