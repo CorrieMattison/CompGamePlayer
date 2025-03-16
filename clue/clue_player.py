@@ -104,6 +104,10 @@ def check_real_w():
 def check_real_r():
     check_accusation(real_r, 2, "ROOM", "R")
 
+def make_accusation():
+    print("Make an accusation. The crime was committed by " + accusation[0] + " with the " + accusation[1] + " in the " + accusation[2] + ".")
+    sys.exit()
+
 class Move:
     player_possibilities = []
     def __init__(self, player, guess, result):
@@ -175,6 +179,7 @@ class Player:
         self.name = name
         self.num_cards = num_cards
         self.cards_found = 0
+        self.fully_known = False
         self.s_possible = init_possibilities(suspects.copy())
         self.w_possible = init_possibilities(weapons.copy())
         self.r_possible = init_possibilities(rooms.copy())
@@ -213,6 +218,10 @@ class Player:
             for i in possibilities.keys():
                 if possibilities[i] == "?":
                     possibilities[i] = "N"
+        self.fully_known = True
+    
+    def all_are_found(self):
+        return self.fully_known
 
     def __str__(self):
         return suspects[self.name] + "\nSuspects: " + str(self.s_possible) + "\nWeapons: " + str(self.w_possible) + "\nRooms: " + str(self.r_possible) + "\nDiscovered: " + str(self.cards_found) + " out of " + str(self.num_cards)
@@ -281,9 +290,7 @@ def play(starting_index):
         if i == 0:
             # Handling if you win.
             if accuse:
-                print("Make an accusation. The crime was committed by " + accusation[0] + " with the " + accusation[1] + " in the " + accusation[2] + ".")
-                sys.exit()
-            
+                make_accusation()
             possible_rooms = get_input(lambda input : is_rooms(input), "Enter rooms I can go to: ")
             if len(possible_rooms) == 0:
                 print("It appears that there is no possible way to suggest. Move to the room that you can get closest to. If there's a tie, choose the position closer to entering a corner room.")
@@ -314,16 +321,23 @@ def play(starting_index):
                         for key in ratings[type_i].keys():
                             if ratings[type_i][key] == num_i:
                                 organized_ratings[type_i][str(num_i)].append(key)
-                print(organized_ratings)
+                
+                s_known = not accusation[0] == "?"
+                w_known = not accusation[1] == "?"
+                r_known = not accusation[2] == "?"
 
-                current_guess = "WRL" # FIX, THIS IS JUST SO IT DOESN'T BREAK
+                if not players[0].all_are_found():
+                    pass
+
+                current_guess = "WLB" # FIX, THIS IS JUST SO IT DOESN'T BREAK
 
         else:
             current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
             if current_guess == "":
                 suggest = False
         if suggest:
-            new_move = Move(players[i].get_name(), current_guess, get_input(lambda input : valid_result(input), "Enter the results of the guess: "))
+            result = get_input(lambda input : valid_result(input), "Enter the results of the guess: ")
+            new_move = Move(players[i].get_name(), current_guess, result)
             moves.append(new_move)
             new_move.apply_move()
             if not new_move.is_fully_applied():
@@ -334,6 +348,14 @@ def play(starting_index):
                 if move.is_fully_applied():
                     unused_moves.remove(move)
             for j in range(len(players)): print(players[i])
+            if i == 0:
+                can_accuse = True
+                for i in range(len(result)):
+                    if not result[i] == "Y":
+                        can_accuse = False
+                        break
+                if can_accuse and accuse:
+                    make_accusation()
 
 start_i = int(get_input(lambda input : input.isnumeric(), "Index of the starting player (I'm 0): "))
 
