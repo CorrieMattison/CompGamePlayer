@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import random as rand
 
 suspects = {"M": "Col. Mustard", "P": "Prof. Plum", "G": "Mr. Green", "E": "Mrs. Peacock", "S": "Miss Scarlet", "W": "Mrs. White"}
 weapons = {"K": "Knife", "C": "Candlestick", "P": "Pistol", "R": "Rope", "L": "Lead Pipe", "W": "Wrench"}
@@ -43,6 +44,8 @@ def init_possibilities(possibilities_dict):
     return possibilities_dict
 
 def valid_guess(guess):
+    if guess == "":
+        return True
     if not len(guess) == 3:
         return False
     if not guess[0] in suspects.keys():
@@ -60,6 +63,7 @@ real_s = init_possibilities(suspects.copy())
 real_w = init_possibilities(weapons.copy())
 real_r = init_possibilities(rooms.copy())
 accusation = ["?", "?", "?"]
+accuse = False
 
 def check_accusation(possible_items, type_index, type_string, type):
     known = False
@@ -88,6 +92,8 @@ def check_accusation(possible_items, type_index, type_string, type):
     if known:
         accusation[type_index] = the_possible
         print("We now know that the " + type_string + " is " + get_item(type, the_possible))
+        if (not accusation[0] == "?") and (not accusation[1] == "?") and (not accusation[2] == "?"):
+            accuse = True
 
 def check_real_s():
     check_accusation(real_s, 0, "SUSPECT", "S")
@@ -245,20 +251,89 @@ for i in range(players[0].get_num_cards()):
 
 print(players[0])
 
+def is_rooms(input):
+    for i in range(len(input)):
+        if not input[i] in rooms.keys():
+            return False
+    return True
+
+def rate_room(room):
+    for i in range(num_players):
+        if players[i].r_possible[room] == "Y":
+            return i
+    return -1
+
+def rate_weapon(weapon):
+    for i in range(num_players):
+        if players[i].w_possible[weapon] == "Y":
+            return i
+    return -1
+
+def rate_suspect(suspect):
+    for i in range(num_players):
+        if players[i].s_possible[suspect] == "Y":
+            return i
+    return -1
+
 def play(starting_index):
     for i in range(starting_index, num_players):
-        current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
-        new_move = Move(players[i].get_name(), current_guess, get_input(lambda input : valid_result(input), "Enter the results of the guess: "))
-        moves.append(new_move)
-        new_move.apply_move()
-        if not new_move.is_fully_applied():
-            unused_moves.append(new_move)
-        for i in range(len(unused_moves)): print("\n" + str(unused_moves[i]))
-        for move in unused_moves:
-            move.apply_move()
-            if move.is_fully_applied():
-                unused_moves.remove(move)
-        # for i in range(len(players)): print(players[i])
+        suggest = True
+        if i == 0:
+            # Handling if you win.
+            if accuse:
+                print("Make an accusation. The crime was committed by " + accusation[0] + " with the " + accusation[1] + " in the " + accusation[2] + ".")
+                sys.exit()
+            
+            possible_rooms = get_input(lambda input : is_rooms(input), "Enter rooms I can go to: ")
+            if len(possible_rooms) == 0:
+                print("It appears that there is no possible way to suggest. Move to the room that you can get closest to. If there's a tie, choose the position closer to entering a corner room.")
+                suggest = False
+            else:
+                # Rooms not known by the next player(s). If it were known by index 1, we wouldn't learn anything.
+                room_ratings = dict()
+                for j in range(len(possible_rooms)):
+                    room_ratings[possible_rooms[j]] = rate_room(possible_rooms[j])
+                
+                # Same for weapons
+                weapon_ratings = dict()
+                for weapon in weapons.keys():
+                    weapon_ratings[weapon] = rate_weapon(weapon)
+
+                # And suspects
+                suspect_ratings = dict()
+                for suspect in suspects.keys():
+                    suspect_ratings[suspect] = rate_suspect(suspect)
+
+                ratings = [suspect_ratings, weapon_ratings, room_ratings]
+
+                # Now, for all three, we will make a dictionary of lists, from -1 to the number of players
+                organized_ratings = [dict(), dict(), dict()]
+                for num_i in range(-1, num_players):
+                    for type_i in range(3):
+                        organized_ratings[type_i][str(num_i)] = []
+                        for key in ratings[type_i].keys():
+                            if ratings[type_i][key] == num_i:
+                                organized_ratings[type_i][str(num_i)].append(key)
+                print(organized_ratings)
+
+                current_guess = "WRL" # FIX, THIS IS JUST SO IT DOESN'T BREAK
+
+        else:
+            current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
+            if current_guess == "":
+                suggest = False
+        if suggest:
+            new_move = Move(players[i].get_name(), current_guess, get_input(lambda input : valid_result(input), "Enter the results of the guess: "))
+            moves.append(new_move)
+            new_move.apply_move()
+            if not new_move.is_fully_applied():
+                unused_moves.append(new_move)
+            for j in range(len(unused_moves)): print("\n" + str(unused_moves[i]))
+            for move in unused_moves:
+                move.apply_move()
+                if move.is_fully_applied():
+                    unused_moves.remove(move)
+            for j in range(len(players)): print(players[i])
 
 start_i = int(get_input(lambda input : input.isnumeric(), "Index of the starting player (I'm 0): "))
 
