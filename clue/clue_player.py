@@ -342,18 +342,25 @@ def play(starting_index):
             new_move.apply_move()
             if not new_move.is_fully_applied():
                 unused_moves.append(new_move)
+            print("Unused Moves")
             for j in range(len(unused_moves)): print("\n" + str(unused_moves[i]))
             for move in unused_moves:
                 move.apply_move()
                 if move.is_fully_applied():
                     unused_moves.remove(move)
-            for j in range(len(players)): print(players[i])
+            print("Players")
+            for j in range(len(players)): print(players[j])
             if i == 0:
                 can_accuse = True
-                for i in range(len(result)):
-                    if not result[i] == "Y":
+                print("Checking to accuse...")
+                for j in range(len(result)):
+                    print(not result[j] == "Y")
+                    if not result[j] == "Y":
                         can_accuse = False
+                        print("Not possible " + str(j))
                         break
+                print("Can Accuse:", can_accuse)
+                print("Accuse:", accuse)
                 if can_accuse and accuse:
                     make_accusation()
 
