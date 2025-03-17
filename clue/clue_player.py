@@ -19,7 +19,6 @@ def get_input(is_valid, message):
 num_players = int(get_input(lambda input : input.isnumeric(), "Enter the number of players: "))
 possible_types = ["S", "W", "R"]
 my_known_cards = [[]] * num_players
-print(my_known_cards)
 players = []
 moves = []
 unused_moves = []
@@ -432,17 +431,18 @@ def play(starting_index):
 
         else:
             current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
-            if "S" + current_guess[0] in my_known_cards[i]:
-                print("If asked, show this card: " + suspects[current_guess[0]])
-            elif "W" + current_guess[1] in my_known_cards[i]:
-                print("If asked, show this card: " + weapons[current_guess[1]])
-            elif "R" + current_guess[2] in my_known_cards[i]:
-                print("If asked, show this card: " + rooms[current_guess[2]])
-            else:
-                print("If asked, choose a random card to show.")
             if current_guess == "":
                 print("I conclude that this player only moved.")
                 suggest = False
+            else:
+                if "S" + current_guess[0] in my_known_cards[i]:
+                    print("If asked, show this card: " + suspects[current_guess[0]])
+                elif "W" + current_guess[1] in my_known_cards[i]:
+                    print("If asked, show this card: " + weapons[current_guess[1]])
+                elif "R" + current_guess[2] in my_known_cards[i]:
+                    print("If asked, show this card: " + rooms[current_guess[2]])
+                else:
+                    print("If asked, choose a random card to show.")
         if suggest:
             result = get_input(lambda input : valid_result(input), "Enter the results of the guess: ")
             new_move = Move(players[i].get_name(), current_guess, result)
@@ -484,3 +484,7 @@ while True:
     # When considering choices for already-known types when there's only one more to be discovered, also consider ones that you know someone else has if they're far enough along that it won't affect potential discoveries.
     # Make valid_result() actually check.
     # Make it think about which cards would be possible to show if it doesn't matter.
+    # Make an undo button.
+    # If know enough not, can conclude cards.
+    # If you have to do something a later player has, make the ? something from an earlier player.
+    # Make sure you conclude an accusation if there's only one possibility left.
