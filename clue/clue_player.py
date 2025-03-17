@@ -478,13 +478,3 @@ start_i = int(get_input(lambda input : input.isnumeric(), "Index of the starting
 play(start_i)
 while True:
     play(0)
-
-# Things I would still like to improve:
-    # Make it consider what the best option would be if it can't choose the most favorable option when there's only one thing left to discover. Don't just be random.
-    # When considering choices for already-known types when there's only one more to be discovered, also consider ones that you know someone else has if they're far enough along that it won't affect potential discoveries.
-    # Make valid_result() actually check.
-    # Make it think about which cards would be possible to show if it doesn't matter.
-    # Make an undo button.
-    # If know enough not, can conclude cards.
-    # If you have to do something a later player has, make the ? something from an earlier player.
-    # Make sure you conclude an accusation if there's only one possibility left.
