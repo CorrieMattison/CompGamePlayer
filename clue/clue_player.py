@@ -2,11 +2,27 @@ import numpy as np
 import sys
 import random as rand
 
+# Abbreviations as dictionaries, for writing full description
 suspects = {"M": "Col. Mustard", "P": "Prof. Plum", "G": "Mr. Green", "E": "Mrs. Peacock", "S": "Miss Scarlett", "W": "Mrs. White"}
 weapons = {"K": "Knife", "C": "Candlestick", "P": "Pistol", "R": "Rope", "L": "Lead Pipe", "W": "Wrench"}
 rooms = {"H": "Hall", "L": "Lounge", "D": "Dining Room", "K": "Kitchen", "B": "Ballroom", "C": "Conservatory", "I": "Billiard Room", "Y": "Library", "S": "Study"}
 
-def get_input(is_valid, message):
+def get_input(is_valid, message: str) -> str:
+    """Gets input until it is valid, but ends the program if the user enters "STOP"
+
+    Parameters
+    ----------
+    is_valid
+        Lambda expression to check whether the input is valid
+    message: str
+        Message to be given to the user when getting input
+
+    Returns
+    -------
+    str
+        The validified input
+    """
+
     valid_input = input(message)
     if valid_input == "STOP":
         sys.exit()
@@ -16,14 +32,54 @@ def get_input(is_valid, message):
             sys.exit()
     return valid_input
 
-num_players = int(get_input(lambda input : input.isnumeric(), "Enter the number of players: "))
+def valid_num_players(num: str):
+    """Checks if an input number of players is valid
+    
+    Parameters
+    ----------
+    num: int
+        The input number of players (should be a string from input)
+
+    Returns
+    -------
+    boolean
+        Whether it is a valid number of players
+    """
+
+    if not num.isnumeric():
+        return False
+    if int(num) > 6:
+        return False
+    if int(num) < 2:
+        return False
+    return True
+
+num_players = int(get_input(lambda input : valid_num_players(input), "Enter the number of players: "))
+
+# Suspects, weapons, and rooms as types of information
 possible_types = ["S", "W", "R"]
+
+# Keeps track of which cards you know (so you know which card to show if necessary)
 my_known_cards = [[]] * num_players
+
 players = []
 moves = []
 unused_moves = []
 
-def items_for_type(given_type):
+def items_for_type(given_type: str):
+    """Gives abbreviated names for each item of a type
+
+    Parameters
+    ----------
+    given_type: str ("S" - suspects, "W" - weapons, "R" - rooms)
+        Which type of items you would like to get
+
+    Returns
+    -------
+    list
+        A list of abbreviations for each item of the given type
+    """
+
     if given_type == "S":
         return suspects.keys()
     elif given_type == "W":
@@ -32,17 +88,27 @@ def items_for_type(given_type):
         return rooms.keys()
     
 def get_item(type, item):
+    """Returns the name of the chosen item
+
+    Parameters
+    ----------
+    type: str ("S", "W", "R")
+        The type of item of choice
+    item: str (of that type)
+        The item of choice of that type
+    
+    Returns
+    -------
+    str
+        The name of the chosen item
+    """
+
     if type == "S":
         return suspects[item]
     elif type == "W":
         return weapons[item]
     elif type == "R":
         return rooms[item]
-
-def init_possibilities(possibilities_dict):
-    for i in possibilities_dict.keys():
-        possibilities_dict[i] = "?"
-    return possibilities_dict
 
 def valid_guess(guess):
     if guess == "":
@@ -59,6 +125,24 @@ def valid_guess(guess):
 
 def valid_result(result):
     return True # Fix - make this actually check
+
+def init_possibilities(possibilities_dict):
+    """Initializes all possibilities to unknown in the input dictionary
+
+    Parameters
+    ----------
+    possibilities_dict
+        The dictionary whose items should be reset to unknown
+    
+    Returns
+    -------
+    dict
+        The same dictionary that was passed to this method
+    """
+
+    for i in possibilities_dict.keys():
+        possibilities_dict[i] = "?"
+    return possibilities_dict
 
 real_s = init_possibilities(suspects.copy())
 real_w = init_possibilities(weapons.copy())
