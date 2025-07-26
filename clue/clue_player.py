@@ -601,13 +601,36 @@ def cards_from_bool(input):
         return card_num
     else:
         return card_num + 1
+    
+def valid_player_name(input: str, index: int):
+    """Checks whether input is a valid player name
+
+    Parameters
+    ----------
+    input: str
+        the input from the player
+    index: int
+        the index of this player's name
+    
+    Returns
+    -------
+    bool
+        whether the name is valid for this player
+    """
+
+    if not input in suspects.keys():
+        return False
+    for i in range(0, index):
+        if players[i].get_name() == input:
+            return False
+    return True
 
 # Initializes the players list (name and number of cards)
 for i in range(num_players):
     if same_card_num:
-        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), i, card_num))
+        players.append(Player(get_input(lambda input : valid_player_name(input, i), "Enter the player's name: "), i, card_num))
     else:
-        players.append(Player(get_input(lambda input : input in suspects.keys(), "Enter the player's name: "), i, cards_from_bool(get_input(lambda input : input in ["Y", "N"], "Does this player have " + str(card_num) + " cards? Y/N: "))))
+        players.append(Player(get_input(lambda input : valid_player_name(input, i), "Enter the player's name: "), i, cards_from_bool(get_input(lambda input : input in ["Y", "N"], "Does this player have " + str(card_num) + " cards? Y/N: "))))
 
 def valid_my_cards(input):
     """Whether the input is a valid possibility for the computer's cards
