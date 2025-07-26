@@ -227,6 +227,7 @@ def check_accusation(possible_items, type_index, type_string, item_type):
 
     if known:
         accusation[type_index] = the_possible
+        possible_items[the_possible] = "Y"
         print("We now know that the " + type_string + " is " + get_item(item_type, the_possible))
         time.sleep(1)
         if (not accusation[0] == "?") and (not accusation[1] == "?") and (not accusation[2] == "?"):
@@ -484,16 +485,22 @@ class Player:
             if not self.s_possible[item] == "?":
                 return True
             self.s_possible[item] = value
+            if value == "Y":
+                real_s[item] = "N"
             check_real_s()
         elif item_type == "W":
             if not self.w_possible[item] == "?":
                 return True
             self.w_possible[item] = value
+            if value == "Y":
+                real_w[item] = "N"
             check_real_w()
         elif item_type == "R":
             if not self.r_possible[item] == "?":
                 return True
             self.r_possible[item] = value
+            if value == "Y":
+                real_r[item] = "N"
             check_real_r()
         else:
             print("I was somehow given something to change that was not S or W or R. This should be impossible.")
@@ -519,6 +526,21 @@ class Player:
         if not redundant:
             print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item(item_type, item))
             time.sleep(1)
+
+            num_unknown = 0
+            for the_suspect in suspects.keys():
+                if self.s_possible[the_suspect] == "?":
+                    num_unknown += 1
+            for the_weapon in weapons.keys():
+                if self.w_possible[the_weapon] == "?":
+                    num_unknown += 1
+            for the_room in rooms.keys():
+                if self.r_possible[the_room] == "?":
+                    num_unknown += 1
+            
+            if num_unknown + self.cards_found == self.num_cards:
+                self.unknown_are_true()
+
             # num_players_without = 0
             # index_may_have = -1
             # for player_i in range(num_players):
@@ -564,6 +586,15 @@ class Player:
             for i in possibilities.keys():
                 if possibilities[i] == "?":
                     possibilities[i] = "N"
+        self.fully_known = True
+    
+    def unknown_are_true(self):
+        """Sets all unknown cards to true. Call this when you have found enough false cards to know that unknowns are true."""
+
+        for possibilities in [self.s_possible, self.w_possible, self.r_possible]:
+            for i in possibilities.keys():
+                if possibilities[i] == "?":
+                    possibilities[i] = "Y"
         self.fully_known = True
     
     def all_are_found(self):
@@ -878,10 +909,10 @@ def play(starting_index: int):
                     make_accusation()
 
                 current_guess = suggestion[0] + suggestion[1] + suggestion[2]
-                print("Suggest: " + suspects[suggestion[0]] + " with the " + weapons[suggestion[1]] + " in the " + rooms[suggestion[2]] + ".")
+                print("\nSuggest: " + suspects[suggestion[0]] + " with the " + weapons[suggestion[1]] + " in the " + rooms[suggestion[2]] + ".")
 
         else:
-            current_guess = get_input(lambda input : valid_guess(input), "\nThree characters (suspect, weapon, room)\nEnter the current guess (" + suspects[players[i].get_name()] + "): ")
+            current_guess = get_input(lambda input : valid_guess(input), "Three characters (suspect, weapon, room)\nEnter the current guess (" + suspects[players[i].get_name()] + "): ")
             if current_guess == "":
                 print("I conclude that this player only moved.")
                 suggest = False
