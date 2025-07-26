@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import random as rand
+import time
 
 # Abbreviations as dictionaries, for writing full description
 suspects = {"M": "Col. Mustard", "P": "Prof. Plum", "G": "Mr. Green", "E": "Mrs. Peacock", "S": "Miss Scarlett", "W": "Mrs. White"}
@@ -94,8 +95,8 @@ def get_item(type, item):
     ----------
     type: str ("S", "W", "R")
         The type of item of choice
-    item: str (of that type)
-        The item of choice of that type
+    item: str
+        The first letter of an item of choice of that type
     
     Returns
     -------
@@ -110,7 +111,20 @@ def get_item(type, item):
     elif type == "R":
         return rooms[item]
 
-def valid_guess(guess):
+def valid_guess(guess: str):
+    """Checks whether a guess is valid
+
+    Parameters
+    ----------
+    guess: str
+        The guess that was input
+
+    Returns
+    -------
+    bool
+        Whether the guess is valid (empty or a three-character string of suspects, weapons, rooms)
+    """
+
     if guess == "":
         return True
     if not len(guess) == 3:
@@ -123,8 +137,21 @@ def valid_guess(guess):
         return False
     return True
 
-def valid_result(result):
-    return True # Fix - make this actually check
+def valid_result(result: str):
+    """Checks whether the result (response to a guess) is valid
+
+    Parameters
+    ----------
+    result: str
+        The result that was input
+    
+    Returns
+    -------
+    bool
+        Always True (should be fixed to actually check)
+    """
+
+    return True
 
 def init_possibilities(possibilities_dict):
     """Initializes all possibilities to unknown in the input dictionary
@@ -151,6 +178,24 @@ accusation = ["?", "?", "?"]
 accuse = False
 
 def check_accusation(possible_items, type_index, type_string, type):
+    """
+
+    Parameters
+    ----------
+    possible_items
+        A list of final items (real_s, real_w, or real_r)
+    type_index
+        The index of the type (s = 0, w = 1, r = 2)
+    type_string
+        A string for the type (SUSPECT, WEAPON, ROOM)
+    type
+        What type of item to check (S, W, R)
+
+    Returns
+    -------
+
+    """
+
     known = False
 
     num_possible = 0
@@ -309,6 +354,7 @@ class Player:
         redundant = self.set_item(type, item, "N")
         if not redundant:
             print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item(type, item))
+            time.sleep(1)
 
     def set_item_true(self, type, item):
         redundant = self.set_item(type, item, "Y")
@@ -318,6 +364,7 @@ class Player:
             for i in players_without_item:
                 players[i].set_item_false(type, item)
             print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item(type, item))
+            time.sleep(1)
             self.cards_found += 1
             if self.cards_found == self.num_cards:
                 self.unknown_are_false()
@@ -514,7 +561,7 @@ def play(starting_index):
                 print("Suggest: " + suspects[suggestion[0]] + " with the " + weapons[suggestion[1]] + " in the " + rooms[suggestion[2]] + ".")
 
         else:
-            current_guess = get_input(lambda input : valid_guess(input), "Enter the current guess (" + suspects[players[i].get_name()] + "): ")
+            current_guess = get_input(lambda input : valid_guess(input), "\nThree characters (suspect, weapon, room)\nEnter the current guess (" + suspects[players[i].get_name()] + "): ")
             if current_guess == "":
                 print("I conclude that this player only moved.")
                 suggest = False
@@ -528,7 +575,7 @@ def play(starting_index):
                 else:
                     print("If asked, choose a random card to show.")
         if suggest:
-            result = get_input(lambda input : valid_result(input), "Enter the results of the guess: ")
+            result = get_input(lambda input : valid_result(input), "\nY = didn't have, N = had unknown, abbreviation = what they had\nEnter the results of the guess: ")
             new_move = Move(players[i].get_name(), current_guess, result)
             moves.append(new_move)
             new_move.apply_move()
