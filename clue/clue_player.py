@@ -4,8 +4,10 @@ import random as rand
 import time
 
 # Abbreviations as dictionaries, for writing full description
+# E is Mrs. Peacock
 suspects = {"M": "Col. Mustard", "P": "Prof. Plum", "G": "Mr. Green", "E": "Mrs. Peacock", "S": "Miss Scarlett", "W": "Mrs. White"}
 weapons = {"K": "Knife", "C": "Candlestick", "P": "Pistol", "R": "Rope", "L": "Lead Pipe", "W": "Wrench"}
+# I is Billiard Room, Y is Library
 rooms = {"H": "Hall", "L": "Lounge", "D": "Dining Room", "K": "Kitchen", "B": "Ballroom", "C": "Conservatory", "I": "Billiard Room", "Y": "Library", "S": "Study"}
 
 def get_input(is_valid, message: str) -> str:
