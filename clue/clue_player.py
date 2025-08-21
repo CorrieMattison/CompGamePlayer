@@ -90,7 +90,7 @@ def items_for_type(given_type: str):
     elif given_type == "R":
         return rooms.keys()
     
-def get_item(item_type, item):
+def get_item_name(item_type, item):
     """Returns the name of the chosen item
 
     Parameters
@@ -230,11 +230,14 @@ def check_accusation(possible_items, type_index, type_string, item_type):
     if known:
         accusation[type_index] = the_possible
         possible_items[the_possible] = "Y"
-        print("We now know that the " + type_string + " is " + get_item(item_type, the_possible))
+        print("We now know that the " + type_string + " is " + get_item_name(item_type, the_possible))
         time.sleep(1)
         if (not accusation[0] == "?") and (not accusation[1] == "?") and (not accusation[2] == "?"):
             global accuse
             accuse = True
+        # FIX -- I was in the middle of adding this
+        # for player in players:
+        #     if player
 
 def check_real_s():
     """Checks the final list for suspects."""
@@ -526,7 +529,7 @@ class Player:
 
         redundant = self.__set_item(item_type, item, "N")
         if not redundant:
-            print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item(item_type, item))
+            print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item_name(item_type, item))
             time.sleep(1)
 
             num_unknown = 0
@@ -575,7 +578,7 @@ class Player:
             players_without_item.pop(self.my_index)
             for i in players_without_item:
                 players[i].set_item_false(item_type, item)
-            print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item(item_type, item))
+            print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item_name(item_type, item))
             time.sleep(1)
             self.cards_found += 1
             if self.cards_found == self.num_cards:
