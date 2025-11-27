@@ -812,6 +812,14 @@ class Ratings:
     """
 
     def __init__(self, possible_rooms):
+        """Creates a structure to store ratings for all types of cards (everything except possible rooms will be learned with later input)
+        
+        Parameters
+        ----------
+        possible_rooms: str
+            a string of potential rooms to move to, taken from input
+        """
+        
         self.__possible_rooms = possible_rooms
         self.__organized_ratings = self.__get_organized_ratings()
         self.__set_types_known()
@@ -995,7 +1003,7 @@ class Ratings:
 
         options = self.__first_not_empty(item_type, preferred_ratings)
         if (len(options) == 1 and no_one) or always_two:
-            options = options * prefer_weight + self.__second_not_empty()
+            options = options * prefer_weight + self.__second_not_empty(item_type, preferred_ratings)
         return rand.choice(options)
 
 
@@ -1039,7 +1047,7 @@ def play(starting_index: int):
 
                 elif len(ratings.known_types) == 1:
                     for item_type in possible_types:
-                        if item_type == ratings.known_types[0]:
+                        if item_type in ratings.known_types:
                             suggestion[item_type] = ratings.get_item(item_type, preferred_rating_known_learn, True, 4, True)
                         else:
                             suggestion[item_type] = ratings.get_item(item_type, preferred_rating_unknown, False)
