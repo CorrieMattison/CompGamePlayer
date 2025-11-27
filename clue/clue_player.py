@@ -90,7 +90,7 @@ def items_for_type(given_type: str):
     elif given_type == "R":
         return rooms.keys()
     
-def get_item(item_type, item):
+def get_item_name(item_type, item):
     """Returns the name of the chosen item
 
     Parameters
@@ -230,11 +230,14 @@ def check_accusation(possible_items, type_index, type_string, item_type):
     if known:
         accusation[type_index] = the_possible
         possible_items[the_possible] = "Y"
-        print("We now know that the " + type_string + " is " + get_item(item_type, the_possible))
+        print("We now know that the " + type_string + " is " + get_item_name(item_type, the_possible))
         time.sleep(1)
         if (not accusation[0] == "?") and (not accusation[1] == "?") and (not accusation[2] == "?"):
             global accuse
             accuse = True
+        # FIX -- I was in the middle of adding this
+        # for player in players:
+        #     if player
 
 def check_real_s():
     """Checks the final list for suspects."""
@@ -526,7 +529,7 @@ class Player:
 
         redundant = self.__set_item(item_type, item, "N")
         if not redundant:
-            print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item(item_type, item))
+            print("We have discovered that " + suspects[self.get_name()] + " does NOT have the card " + get_item_name(item_type, item))
             time.sleep(1)
 
             num_unknown = 0
@@ -575,7 +578,7 @@ class Player:
             players_without_item.pop(self.my_index)
             for i in players_without_item:
                 players[i].set_item_false(item_type, item)
-            print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item(item_type, item))
+            print("We have discovered that " + suspects[self.get_name()] + " has the card " + get_item_name(item_type, item))
             time.sleep(1)
             self.cards_found += 1
             if self.cards_found == self.num_cards:
@@ -788,6 +791,222 @@ def rate_suspect(suspect):
 
     return rate(lambda index : players[index].s_possible[suspect])
 
+class Ratings:
+    """Generates then stores ratings of different cards to suggest
+
+    Attributes
+    ----------
+    unknown_types: list
+        a list of all the types that you don't know (the ones that mean you can't accuse yet)
+    known_types: list
+        a list of all the types you DO know
+    
+    Methods
+    -------
+    get_rating(item_type, item)
+        returns the rating of an item
+    get_items_at_rating(item_type, rating)
+        returns the items with a rating
+    is_known(item_type)
+        returns whether a type is known
+    """
+
+    def __init__(self, possible_rooms):
+        """Creates a structure to store ratings for all types of cards (everything except possible rooms will be learned with later input)
+        
+        Parameters
+        ----------
+        possible_rooms: str
+            a string of potential rooms to move to, taken from input
+        """
+        
+        self.__possible_rooms = possible_rooms
+        self.__organized_ratings = self.__get_organized_ratings()
+        self.__set_types_known()
+
+    def __get_ratings(self):
+        """Rates all items that are possible to suggest
+
+        Returns
+        -------
+        dict of dicts
+            S/W/R -> items -> rating (as an int)
+        """
+
+        # Rooms not known by the next player(s). If it were known by index 1, we wouldn't learn anything.
+        room_ratings = dict()
+        for room in self.__possible_rooms:
+            room_ratings[room] = rate_room(room)
+
+        # Same for weapons
+        weapon_ratings = dict()
+        for weapon in weapons.keys():
+            weapon_ratings[weapon] = rate_weapon(weapon)
+
+        # And suspects
+        suspect_ratings = dict()
+        for suspect in suspects.keys():
+            suspect_ratings[suspect] = rate_suspect(suspect)
+
+        return {"S": suspect_ratings, "W": weapon_ratings, "R": room_ratings}
+    
+    def __get_organized_ratings(self):
+        """Starting from the ratings, organizes different cards based on their ratings
+
+        Returns
+        -------
+        dict of dict of lists
+            S/W/R -> rating -> list of items found there
+        """
+
+        self.__ratings = self.__get_ratings()
+
+        # Now, for all three, we will make a dictionary of lists, from -1 to the number of players
+        # This keeps track of which ones have which rating, making it easier to access.
+        organized_ratings = {"S": dict(), "W": dict(), "R": dict()}
+        for num_i in range(-1, num_players):
+            for item_type in possible_types:
+                organized_ratings[item_type][str(num_i)] = []
+                for key in self.__ratings[item_type].keys():
+                    if self.__ratings[item_type][key] == num_i:
+                        organized_ratings[item_type][str(num_i)].append(key)
+
+        return organized_ratings
+    
+    def __set_types_known(self):
+        """Sets lists of known and unknown types."""
+        self.known_types = []
+        self.unknown_types = []
+
+        if accusation[0] == "?":
+            self.unknown_types.append("S")
+        else:
+            self.known_types.append("S")
+
+        if accusation[1] == "?":
+            self.unknown_types.append("W")
+        else:
+            self.known_types.append("W")
+
+        if accusation[2] == "?":
+            self.unknown_types.append("R")
+        else:
+            self.known_types.append("R")
+
+    def get_rating(self, item_type, item):
+        """Returns the rating for a particular item
+
+        Parameters
+        ----------
+        item_type: str
+            S, W, or R (the type of item)
+        item: str
+            the item of that type (such as K = Knife)
+        
+        Returns
+        -------
+        int
+            the rating for the item
+        """
+
+        return self.__ratings[item_type][item]
+    
+    def get_items_at_rating(self, item_type, rating: str):
+        """Returns the items with a particular rating, of a certain type
+
+        Parameters
+        ----------
+        item_type: str
+            S, W, or R (the type of item)
+        rating: str
+            the rating you want to know about (as a STRING)
+        
+        Returns
+        -------
+        list of string
+            a list of all the items with this rating
+        """
+        return self.__organized_ratings[item_type][rating]
+
+    def is_known(self, item_type):
+        """Returns whether a type is known (whether it's blocking us from accusing)"""
+
+        return item_type in self.known_types
+    
+    def __first_not_empty(self, item_type, options):
+        """Finds the first list at a particular rating, going through an order of preferences, that is not empty
+        
+        Parameters
+        ----------
+        item_type
+            S/W/R -- the type of item
+        options: list
+            a list of preferences (as ints) of ratings, in order
+
+        Returns
+        -------
+        list
+            a list of items at the first rating that wasn't empty
+        """
+
+        for i in options:
+            if not len(self.get_items_at_rating(item_type, str(i))) == 0:
+                return self.get_items_at_rating(item_type, str(i))
+        return []
+    
+    def __second_not_empty(self, item_type, options):
+        """Finds the second list at a particular rating, going through an order of preferences, that is not empty
+        
+        Parameters
+        ----------
+        item_type
+            S/W/R -- the type of item
+        options: list
+            a list of preferences (as ints) of ratings, in order
+
+        Returns
+        -------
+        list
+            a list of items at the second rating that wasn't empty
+        """
+
+        found_first = False
+        for i in options:
+            if not len(self.get_items_at_rating(item_type, str(i))) == 0:
+                if found_first:
+                    return self.get_items_at_rating(item_type, str(i))
+                else:
+                    found_first = True
+        return []
+
+    def get_item(self, item_type: str, preferred_ratings, no_one: bool, prefer_weight: int = 1, always_two: bool = False):
+        """Gets an item, based on the ratings and preferences
+
+        Parameters
+        ----------
+        item_type: str
+            S/W/R
+        preferred_ratings
+            a list, in order, of which ratings would be preferred
+        no_one: bool
+            whether to restrict this such that there MUST be multiple options to choose from
+        prefer_weight: int
+            if no_one, the weight to put on trying to choose the one given higher preference (default is 1)
+        always_two: bool
+            whether to go to the second less-preferred group no matter what
+        
+        Returns
+        -------
+        str
+            a randomly chosen item of the type, based on preferences
+        """
+
+        options = self.__first_not_empty(item_type, preferred_ratings)
+        if (len(options) == 1 and no_one) or always_two:
+            options = options * prefer_weight + self.__second_not_empty(item_type, preferred_ratings)
+        return rand.choice(options)
+
+
 def play(starting_index: int):
     """Method to play a round (starting with player index and going to the player after the computer)
 
@@ -808,110 +1027,40 @@ def play(starting_index: int):
                 print("It appears that there is no possible way to suggest. Move to the room that you can get closest to. If there's a tie, choose the position closer to entering a corner room.")
                 suggest = False
             else:
-                suggestion = [rand.choice(list(suspects.keys())), rand.choice(list(weapons.keys())), rand.choice(possible_rooms)]
-                # Rooms not known by the next player(s). If it were known by index 1, we wouldn't learn anything.
-                room_ratings = dict()
-                for j in range(len(possible_rooms)):
-                    room_ratings[possible_rooms[j]] = rate_room(possible_rooms[j])
+                suggestion = {"S": rand.choice(list(suspects.keys())), "W": rand.choice(list(weapons.keys())), "R": rand.choice(possible_rooms)}
+                ratings = Ratings(possible_rooms)
 
-                # Same for weapons
-                weapon_ratings = dict()
-                for weapon in weapons.keys():
-                    weapon_ratings[weapon] = rate_weapon(weapon)
+                # Will be num_players to 1
+                reversed_players = []
+                for k in range(1, num_players):
+                    reversed_players.append(num_players - k)
+                preferred_rating_unknown = [-1, 0] + reversed_players
+                preferred_rating_known = [0] + reversed_players + [-1]
+                preferred_rating_known_learn = [0, -1] + reversed_players
 
-                # And suspects
-                suspect_ratings = dict()
-                for suspect in suspects.keys():
-                    suspect_ratings[suspect] = rate_suspect(suspect)
-
-                ratings = [suspect_ratings, weapon_ratings, room_ratings]
-
-                # Now, for all three, we will make a dictionary of lists, from -1 to the number of players
-                # This keeps track of which ones have which rating, making it easier to access.
-                organized_ratings = [dict(), dict(), dict()]
-                for num_i in range(-1, num_players):
-                    for type_i in range(3):
-                        organized_ratings[type_i][str(num_i)] = []
-                        for key in ratings[type_i].keys():
-                            if ratings[type_i][key] == num_i:
-                                organized_ratings[type_i][str(num_i)].append(key)
-                
-                s_known = not accusation[0] == "?"
-                w_known = not accusation[1] == "?"
-                r_known = not accusation[2] == "?"
-                num_known = 0
-                if s_known: num_known += 1
-                if w_known: num_known += 1
-                if r_known: num_known += 1
-
-                # first_all_found = -1
-                # for j in range(1, num_players):
-                #     if players[j].all_are_found():
-                #         first_all_found = j
-                #         break
-
-                if num_known == 2:
-                    i_not_known = -1
-                    if not s_known:
-                        i_not_known = 0
-                    elif not w_known:
-                        i_not_known = 1
-                    elif not r_known:
-                        i_not_known = 2
-                    else:
-                        print("Somehow, when two are known, none are NOT known.")
-                    options = organized_ratings[i_not_known]["-1"]
-                    if not len(options) == 0:
-                        chosen = rand.choice(options)
-                        for j in range(3):
-                            if j == i_not_known:
-                                suggestion[j] = chosen
-                            else:
-                                best_indices = [0, -1]
-                                for k in range(1, num_players):
-                                    best_indices.append(num_players - k)
-                                for k in best_indices:
-                                    if not len(organized_ratings[j][str(k)]) == 0:
-                                        suggestion[j] = rand.choice(organized_ratings[j][str(k)])
-                                        break
-                    # FIX -- I think we should add an else
-
-                elif num_known == 1:
-                    i_known = -1
-                    if not s_known:
-                        i_known = 0
-                    elif not w_known:
-                        i_known = 1
-                    elif not r_known:
-                        i_known = 2
-                    else:
-                        print("Somehow, when two are known, none are not known.")
-                    for j in range(3):
-                        if j == i_known:
-                            suggestion[j] = rand.choice([rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["0"]), rand.choice(organized_ratings[i_known]["-1"])])
+                if len(ratings.unknown_types) == 1:
+                    for item_type in possible_types:
+                        if item_type in ratings.unknown_types:
+                            suggestion[item_type] = ratings.get_item(item_type, preferred_rating_unknown, False)
                         else:
-                            best_indices = [-1, 0]
-                            for k in range(1, num_players):
-                                best_indices.append(num_players - k)
-                            for k in best_indices:
-                                if not len(organized_ratings[j][str(k)]) == 0:
-                                    suggestion[j] = rand.choice(organized_ratings[j][str(k)])
-                                    break
-                elif num_known == 0:
-                    for j in range(3):
-                        best_indices = [-1, 0]
-                        for k in range(1, num_players):
-                            best_indices.append(num_players - k)
-                        for k in best_indices:
-                            if not len(organized_ratings[j][str(k)]) == 0:
-                                suggestion[j] = rand.choice(organized_ratings[j][str(k)])
-                                break
+                            suggestion[item_type] = ratings.get_item(item_type, preferred_rating_known, False)
+
+                elif len(ratings.known_types) == 1:
+                    for item_type in possible_types:
+                        if item_type in ratings.known_types:
+                            suggestion[item_type] = ratings.get_item(item_type, preferred_rating_known_learn, True, 4, True)
+                        else:
+                            suggestion[item_type] = ratings.get_item(item_type, preferred_rating_unknown, False)
+
+                elif len(ratings.known_types) == 0:
+                    for item_type in possible_types:
+                        suggestion[item_type] = ratings.get_item(item_type, preferred_rating_unknown, False)
                 else:
                     print("I should have made an accusation.")
                     make_accusation()
 
-                current_guess = suggestion[0] + suggestion[1] + suggestion[2]
-                print("\nSuggest: " + suspects[suggestion[0]] + " with the " + weapons[suggestion[1]] + " in the " + rooms[suggestion[2]] + ".")
+                current_guess = suggestion["S"] + suggestion["W"] + suggestion["R"]
+                print("\nSuggest: " + suspects[suggestion["S"]] + " with the " + weapons[suggestion["W"]] + " in the " + rooms[suggestion["R"]] + ".")
 
         else:
             current_guess = get_input(lambda input : valid_guess(input), "Three characters (suspect, weapon, room)\nEnter the current guess (" + suspects[players[i].get_name()] + "): ")
