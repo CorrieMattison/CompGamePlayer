@@ -1022,7 +1022,7 @@ def play(starting_index: int):
             # Handling if you win.
             if accuse:
                 make_accusation()
-            possible_rooms = get_input(lambda input : is_rooms(input), "Enter rooms I can go to: ")
+            possible_rooms = get_input(lambda input : is_rooms(input), "Enter rooms I can go to (remember, Library = Y and Billiard Room = I): ")
             if len(possible_rooms) == 0:
                 print("It appears that there is no possible way to suggest. Move to the room that you can get closest to. If there's a tie, choose the position closer to entering a corner room.")
                 suggest = False
@@ -1063,7 +1063,7 @@ def play(starting_index: int):
                 print("\nSuggest: " + suspects[suggestion["S"]] + " with the " + weapons[suggestion["W"]] + " in the " + rooms[suggestion["R"]] + ".")
 
         else:
-            current_guess = get_input(lambda input : valid_guess(input), "Three characters (suspect, weapon, room)\nEnter the current guess (" + suspects[players[i].get_name()] + "): ")
+            current_guess = get_input(lambda input : valid_guess(input), "Three characters (suspect, weapon, room)\nRemember, Mrs. Peacock = E, Library = Y, Billiard Room = I\nEnter the current guess (" + suspects[players[i].get_name()] + "): ")
             if current_guess == "":
                 print("I conclude that this player only moved.")
                 suggest = False
@@ -1078,7 +1078,7 @@ def play(starting_index: int):
                     print("If asked, choose a random card to show.")
         if suggest:
             # Get results of the move and apply move
-            result = get_input(lambda input : valid_result(input), "\nY = didn't have, N = had unknown, abbreviation = what they had\nEnter the results of the guess: ")
+            result = get_input(lambda input : valid_result(input), "\nY = didn't have, N = had unknown, abbreviation = what they had\nRemember, Mrs. Peacock = E, Library = Y, Billiard Room = I\nEnter the results of the guess: ")
             new_move = Move(players[i].get_name(), current_guess, result)
             moves.append(new_move)
             new_move.apply_move()
